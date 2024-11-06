@@ -9,14 +9,14 @@ class Vitospanel_Admin {
 
     public function admin_menu(){
         // здесь будем добавлять в админку страницы и подстраницы
-        add_menu_page(__('Vitos Panel Main', 'vitos'), __('Vitos Panel', 'vitos'), 'manage_options', 'vitospanel-main', array($this, 'render_main_page'), 'dashicons-embed-photo');
+        add_menu_page(__('Vitos Panel Main', 'vitos'), __('Vitos Panel', 'vitospanel'), 'manage_options', 'vitospanel-main', array($this, 'render_main_page'), 'dashicons-embed-photo');
         // manage_options - права доступа
         // vitospanel-main - slug
         // render_main_page - callback функция, которая будет все это отрисовывать
 
         // добавим подстраницы
-        add_submenu_page('vitospanel-main', __('Vitos Panel Main', 'vitos'), __('Set Slide', 'vitos'), 'manage_options', 'vitospanel-main'); // parent slug -> vitospanel-main
-        add_submenu_page('vitospanel-main', __('Slides management', 'vitos'), __('Slides management', 'vitos'), 'manage_options', 'vitospanel-slides', array($this, 'render_slides_page')); // parent slug -> vitospanel-main
+        add_submenu_page('vitospanel-main', __('Vitos Panel Main', 'vitos'), __('Set Slide', 'vitospanel'), 'manage_options', 'vitospanel-main'); // parent slug -> vitospanel-main
+        add_submenu_page('vitospanel-main', __('Slides management', 'vitos'), __('Slides management', 'vitospanel'), 'manage_options', 'vitospanel-slides', array($this, 'render_slides_page')); // parent slug -> vitospanel-main
     }
 
     public function render_main_page(){

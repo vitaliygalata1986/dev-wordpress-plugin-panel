@@ -1,3 +1,3 @@
 <div class="wrap">
-    <h1><?php _e('Set slide', 'vitos'); ?></h1>
+    <h1><?php _e('Set Slide', 'vitospanel'); ?></h1>
 </div>
