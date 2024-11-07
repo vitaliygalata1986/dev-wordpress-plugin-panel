@@ -32,4 +32,15 @@ class Vitospanel_Admin {
         wp_enqueue_style('vitospanel', VITOSPANEL_PLUGIN_URL . 'admin/css/vitospanel-admin.css');
         wp_enqueue_script('vitospanel', VITOSPANEL_PLUGIN_URL . 'admin/js/vitospanel-admin.js', array('jquery'));
     }
+
+    public static function getPosts($cnt = 10)
+    {
+        return new WP_Query(array(
+            'post_type' => 'post',
+            'posts_per_page' => $cnt, // кол. постов
+            'orderby' => 'ID', // сортируем по id в обратном порядке - самые последние посты будут выводится самыми первыми
+            'order' => 'DESC',
+            'paged' => $_GET['paged'] ?? 1, // номер страницы пагинации, если $_GET['paged'] есть то возьмем с него, иначе 1
+        ));
+    }
 }

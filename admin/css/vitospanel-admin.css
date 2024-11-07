@@ -1,0 +1,27 @@
+.pagination{
+    margin: 20px 20px 20px 0;
+}
+
+.pagination span,
+.pagination a{
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #428bca;
+    padding: 6px 12px;
+    text-decoration: none;
+    margin: 0;
+}
+
+.pagination span.current{
+    background: #428bca;
+    color: #fff;
+    border: 1px solid #ddd;
+}
+
+.pagination a:hover{
+    background: #eee;
+}
+
+.pagination span.dots{
+    border: none;
+}
