@@ -5,6 +5,16 @@ class Vitospanel_Admin {
         // echo __METHOD__; // укажет - какой клас, какой метод отработал
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_styles')); // $this - от данного экземпляра класа
         add_action('admin_menu', array($this, 'admin_menu')); // action для добавления в админское меню новой опции
+        add_action('admin_post_save_slide', array($this, 'saved_slide')); // хук admin_post_{action} используется для обработки POST-запросов в WordPress и предназначен для авторизованных пользователей (имеющих доступ к панели администратора
+        // add_action('admin_post_{action}') - в action мы должны указать некое значение, которое должны передать на сервер в скрытом поле
+    }
+
+    public static function debug($data){
+        echo "<pre>" . print_r($data, 1) . "</pre>";
+    }
+
+    public function saved_slide(){
+        // self::debug($_POST);
     }
 
     public function admin_menu(){
