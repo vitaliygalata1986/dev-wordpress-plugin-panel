@@ -13,8 +13,44 @@ class Vitospanel_Admin {
         echo "<pre>" . print_r($data, 1) . "</pre>";
     }
 
-    public function saved_slide(){
+    public function saved_slide()
+    {
         // self::debug($_POST);
+        // var_dump($_POST);
+        // die;
+        if(!isset($_POST['vitospanel_add_slide']) || !wp_verify_nonce($_POST['vitospanel_add_slide'], 'vitospanel_action' )){
+            // если не существует поля vitospanel_add_slide в массиве $_POST или функция wp_verify_nonce() его не проверила - тоесть возратила false
+            wp_die( __( 'Error!', 'vitospanel' ) ); // завершим выполнение скрипта
+        }
+
+        $slide_title = isset($_POST['slide_title']) ? trim($_POST['slide_title']) : '';
+        $slide_content = isset($_POST['slide_content']) ? trim($_POST['slide_content']) : '';
+
+        // дальше проверим эти переменные. Так как они могут содержать либо значение, либо пустую строку.
+
+        if(empty($slide_title) || empty ($slide_content)){
+            set_transient('vitospanel_form_erros', __( 'Form fields are required', 'vitospanel' ), 30 );
+            // vitospanel_form_erros - опция для сохранения ошибки
+            // 30 - секунды
+        }else{
+            // сохраним данные в БД
+            $slide_title = wp_unslash( $slide_title ); // wp_unslash - удаляет \ из переданной строки
+            $slide_content = wp_unslash( $slide_content );
+            global $wpdb;
+            // проверим - корректно ли выполнился SQL-запрос
+            // добавляем в таблицу vitos_panel следующие значения: $slide_title, $slide_content
+            if($wpdb->query($wpdb->prepare(
+                "INSERT INTO vitos_panel (title, content) VALUES (%s, %s)", $slide_title, $slide_content
+            ))){
+                // если он выполнился:
+                set_transient( 'vitospanel_form_success', __( 'Slide added', 'vitospanel' ), 30 );
+            }else{
+                set_transient( 'vitospanel_form_errors', __( 'Error saving slide', 'vitospanel' ), 30 );
+            }
+        }
+        wp_redirect( $_POST['_wp_http_referer'] ); // _wp_http_referer - адрес страницы куда хотим сделать редирект
+
+
     }
 
     public function admin_menu(){
