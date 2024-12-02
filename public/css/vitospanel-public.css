@@ -1,0 +1,21 @@
+#slidebox {
+    background-color: #fff;
+    border-top: 3px solid #fd5353;
+    bottom: 0;
+    box-shadow: 0 -2px 5px #aaa;
+    padding: 15px 5%;
+    position: fixed;
+    right: -101%;
+    width: 100%;
+    z-index: 9999;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+#slidebox div {
+    margin-top: 20px;
+}
+
+.vitos-panel__small {
+    float: right;
+}

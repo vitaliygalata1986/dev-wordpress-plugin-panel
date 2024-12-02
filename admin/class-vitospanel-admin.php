@@ -1,26 +1,61 @@
 <?php
-class Vitospanel_Admin {
+
+class Vitospanel_Admin
+{
     public function __construct()
     {
-        // echo __METHOD__; // укажет - какой клас, какой метод отработал
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_styles')); // $this - от данного экземпляра класа
-        add_action('admin_menu', array($this, 'admin_menu')); // action для добавления в админское меню новой опции
-        add_action('admin_post_save_slide', array($this, 'saved_slide')); // хук admin_post_{action} используется для обработки POST-запросов в WordPress и предназначен для авторизованных пользователей (имеющих доступ к панели администратора
-        // add_action('admin_post_{action}') - в action мы должны указать некое значение, которое должны передать на сервер в скрытом поле
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_styles'));
+        add_action('admin_menu', array($this, 'admin_menu')); // action to add a new option to the admin menu
+        add_action('admin_post_save_slide', array($this, 'saved_slide')); // The admin_post_{action} hook is used to handle POST requests in WordPress and is intended for authorized users (those with access to the admin panel)
+        // add_action('admin_post_{action}') - in action we must specify some value that we must pass to the server in a hidden field
+        add_action('wp_ajax_vitospanel_action', array($this, 'change_slide')); // we need only hook for authorized users, because we work on the admin panel
     }
 
-    public static function debug($data){
+    public static function debug($data)
+    {
         echo "<pre>" . print_r($data, 1) . "</pre>";
     }
 
-    public static function get_slides($all = false){ // $all - если мы хотим получить все - id, контент, название - то используем $all
+    public function change_slide()
+    {
+        // self::debug($_POST); // data come POST
+        if (!isset($_POST['vitospanel_change_slide']) || !wp_verify_nonce($_POST['vitospanel_change_slide'], 'vitospanel_action')) {
+            echo json_encode(array('answer' => 'error', 'text' => __('Security error', 'vitospanel'))); // we will send json, not a string (из переданного массива создаст объект json)
+            wp_die(); // finish run script завершим выполнение скрипта
+        }
+        $slide_id = isset($_POST['slideId']) ? (int)$_POST['slideId'] : 0;
+        $article_id = isset($_POST['articleId']) ? (int)$_POST['articleId'] : 0;
+        // var_dump($slide_id);
+        // var_dump($article_id);
+
+        if (!$article_id) {
+            echo json_encode(array('answer' => 'error', 'text' => __('Error article ID', 'vitospanel')));
+        }
+
+        if ($slide_id) { // if the user wants to update
+            if (update_post_meta($article_id, 'vitos_panel', $slide_id)) { // if updated
+                // id_post -> $article_id, meta_key -> vitos_panel, meta_value -> $slide_id
+                echo json_encode(array('answer' => 'success', 'text' => __('Saved successfully', 'vitospanel')));
+            } else {
+                echo json_encode(array('answer' => 'error', 'text' => __('Save error', 'vitospanel')));
+            }
+        } else { // if user zero come
+            delete_post_meta($article_id, 'vitos_panel'); // remove meta vitos_panel for article $article_id
+            echo json_encode(array('answer' => 'success', 'text' => __('Saved successfully', 'vitospanel')));
+        }
+
+        wp_die(); // terminate program execution
+    }
+
+    public static function get_slides($all = false)
+    { // $all - if we want to get everything - id, content, name - then we use $all
         global $wpdb;
-        if($all){
-            return $wpdb->get_results("SELECT * FROM vitos_panel ORDER  BY title ASC", ARRAY_A); // сортируем по алфавитному порядку
+        if ($all) {
+            return $wpdb->get_results("SELECT * FROM vitos_panel ORDER  BY title ASC", ARRAY_A); // sort alphabetically
         }
         $slides = $wpdb->get_results("SELECT id, title FROM vitos_panel ORDER  BY title ASC", ARRAY_A);
         $data = array();
-        foreach ($slides as $slide){
+        foreach ($slides as $slide) {
             $data[$slide['id']] = $slide['title'];
         }
         return $data;
@@ -30,88 +65,92 @@ class Vitospanel_Admin {
     {
         // self::debug($_POST);
         // var_dump($_POST);
-        //  die;
+        // die;
 
-
-        if(!isset($_POST['vitospanel_add_slide']) || !wp_verify_nonce($_POST['vitospanel_add_slide'], 'vitospanel_action' )){
-            // если не существует поля vitospanel_add_slide в массиве $_POST или функция wp_verify_nonce() его не проверила - тоесть возратила false
-            wp_die( __( 'Error!', 'vitospanel' ) ); // завершим выполнение скрипта
+        if (!isset($_POST['vitospanel_add_slide']) || !wp_verify_nonce($_POST['vitospanel_add_slide'], 'vitospanel_action')) {
+            // if the vitospanel_add_slide field does not exist in the $_POST array or the wp_verify_nonce() function did not check it - i.e. returned false
+            wp_die(__('Error!', 'vitospanel')); // terminate script execution
         }
 
         $slide_title = isset($_POST['slide_title']) ? trim($_POST['slide_title']) : '';
         $slide_content = isset($_POST['slide_content']) ? trim($_POST['slide_content']) : '';
-        $slide_id = isset($_POST['slide_id']) ? (int) $_POST['slide_id'] : 0; // если есть slide_id, то явно приведем его к integer
+        $slide_id = isset($_POST['slide_id']) ? (int)$_POST['slide_id'] : 0; // if there is a slide_id, then we explicitly convert it to integer
 
-        // дальше проверим эти переменные. Так как они могут содержать либо значение, либо пустую строку.
+        // next, we will check these variables. Since they can contain either a value or an empty string.
 
-        if(empty($slide_title) || empty ($slide_content)){
-            set_transient('vitospanel_form_erros', __( 'Form fields are required', 'vitospanel' ), 30 );
-            // vitospanel_form_erros - опция для сохранения ошибки
-            // 30 - секунды
-        }else{
-            // сохраним данные в БД
-            $slide_title = wp_unslash( $slide_title ); // wp_unslash - удаляет \ из переданной строки
-            $slide_content = wp_unslash( $slide_content );
+        if (empty($slide_title) || empty ($slide_content)) {
+            set_transient('vitospanel_form_erros', __('Form fields are required', 'vitospanel'), 30);
+            // vitospanel_form_erros - option to save error
+            // 30 - seconds
+        } else {
+            // save the data to the database
+            $slide_title = wp_unslash($slide_title); // wp_unslash - removes \ from the passed string
+            $slide_content = wp_unslash($slide_content);
             global $wpdb;
 
-            if($slide_id){
+            if ($slide_id) {
                 $query = "UPDATE vitos_panel SET title = %s, content = %s WHERE id =$slide_id";
-            }else{
+            } else {
                 $query = "INSERT INTO vitos_panel (title, content) VALUES (%s, %s)";
             }
 
-            // проверим - корректно ли выполнился SQL-запрос
-            // добавляем в таблицу vitos_panel следующие значения: $slide_title, $slide_content
-            if(false !== $wpdb->query($wpdb->prepare($query, $slide_title, $slide_content))){
-                // false !== даже если пользователь при редактировании слайда ничего не изменит, то будет 0, и тогда false !== 0, что будет true
-                // это сделано для того, чтобы пользователь не увидил ошибку и "не испугался"
-                // если он выполнился:
-                set_transient( 'vitospanel_form_success', __( 'Slide saved', 'vitospanel' ), 30 );
-            }else{
-                set_transient( 'vitospanel_form_errors', __( 'Error saving slide', 'vitospanel' ), 30 );
+            // let's check if the SQL query was executed correctly
+            // add the following values ​​to the vitos_panel table: $slide title, $slide content
+            if (false !== $wpdb->query($wpdb->prepare($query, $slide_title, $slide_content))) {
+                // false !== even if the user doesn't change anything while editing the slide, it will be 0, and then false !== 0, which will be true
+                // this is done so that the user doesn't see the error and "get scared"
+                // if it was executed:
+                set_transient('vitospanel_form_success', __('Slide saved', 'vitospanel'), 30);
+            } else {
+                set_transient('vitospanel_form_errors', __('Error saving slide', 'vitospanel'), 30);
             }
         }
-        wp_redirect( $_POST['_wp_http_referer'] ); // _wp_http_referer - адрес страницы куда хотим сделать редирект
-
-
+        wp_redirect($_POST['_wp_http_referer']); // _wp_http_referer - the address of the page where we want to make a redirect
     }
 
-    public function admin_menu(){
-        // здесь будем добавлять в админку страницы и подстраницы
+    public function admin_menu()
+    {
+        // here we will add pages and subpages to the admin panel
         add_menu_page(__('Vitos Panel Main', 'vitos'), __('Vitos Panel', 'vitospanel'), 'manage_options', 'vitospanel-main', array($this, 'render_main_page'), 'dashicons-embed-photo');
-        // manage_options - права доступа
+        // manage_options - access rights
         // vitospanel-main - slug
-        // render_main_page - callback функция, которая будет все это отрисовывать
-
-        // добавим подстраницы
+        // render_main_page - callback function that will render all this
+        // add subpages
         add_submenu_page('vitospanel-main', __('Vitos Panel Main', 'vitos'), __('Set Slide', 'vitospanel'), 'manage_options', 'vitospanel-main'); // parent slug -> vitospanel-main
         add_submenu_page('vitospanel-main', __('Slides management', 'vitos'), __('Slides management', 'vitospanel'), 'manage_options', 'vitospanel-slides', array($this, 'render_slides_page')); // parent slug -> vitospanel-main
     }
 
-    public function render_main_page(){
+    public function render_main_page()
+    {
         require_once VITOSPANEL_PLUGIN_DIR . 'admin/templates/main-page-template.php';
     }
 
-    public function render_slides_page(){
+    public function render_slides_page()
+    {
         require_once VITOSPANEL_PLUGIN_DIR . 'admin/templates/slides-page-template.php';
     }
 
     public function enqueue_scripts_styles()
     {
-        wp_enqueue_style( 'vitospanel-jquery-ui', VITOSPANEL_PLUGIN_URL . 'admin/assets/jquery-ui-accordion/jquery-ui.min.css' );
+        wp_enqueue_style('vitospanel-jquery-ui', VITOSPANEL_PLUGIN_URL . 'admin/assets/jquery-ui-accordion/jquery-ui.min.css');
         wp_enqueue_style('vitospanel', VITOSPANEL_PLUGIN_URL . 'admin/css/vitospanel-admin.css');
-        wp_register_script( 'vitospanel-jquery-ui', VITOSPANEL_PLUGIN_URL . 'admin/assets/jquery-ui-accordion/jquery-ui.min.js' );
-        wp_enqueue_script('vitospanel', VITOSPANEL_PLUGIN_URL . 'admin/js/vitospanel-admin.js', array('jquery','vitospanel-jquery-ui'));
+        wp_register_script('vitospanel-jquery-ui', VITOSPANEL_PLUGIN_URL . 'admin/assets/jquery-ui-accordion/jquery-ui.min.js');
+        wp_enqueue_script('vitospanel-sweetalert', VITOSPANEL_PLUGIN_URL . 'admin/js/sweetalert2.all.min.js');
+        wp_enqueue_script('vitospanel', VITOSPANEL_PLUGIN_URL . 'admin/js/vitospanel-admin.js', array('jquery', 'vitospanel-jquery-ui'));
+        wp_localize_script('vitospanel', 'vitospanelSlide', array('nonce' => wp_create_nonce('vitospanel_action'))); // vitospanel - id script for which it is localized -
+        // this is done so that the object appears before connecting this script
+        // vitospanelSlide - object slide
+        // wp_create_nonce() - function for generate nonce code
     }
 
     public static function getPosts($cnt = 10)
     {
         return new WP_Query(array(
             'post_type' => 'post',
-            'posts_per_page' => $cnt, // кол. постов
-            'orderby' => 'ID', // сортируем по id в обратном порядке - самые последние посты будут выводится самыми первыми
+            'posts_per_page' => $cnt, // number of posts
+            'orderby' => 'ID', // sort by id in reverse order - the most recent posts will be displayed first
             'order' => 'DESC',
-            'paged' => $_GET['paged'] ?? 1, // номер страницы пагинации, если $_GET['paged'] есть то возьмем с него, иначе 1
+            'paged' => $_GET['paged'] ?? 1, // pagination page number, if $_GET['paged'] is there, we'll take it from there, otherwise 1
         ));
     }
 }

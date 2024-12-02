@@ -1,11 +1,11 @@
 <?php
-// если константа не определена в момент удаления плагина
+// if the constant is not defined at the time of plugin removal
 if(!defined('WP_UNINSTALL_PLUGIN')){
     exit;
 }
 
 global $wpdb;
-$wpdb->query('DROP TABLE IF EXISTS `vitos_panel`'); // удаляем таблицу vitos_panel
+$wpdb->query('DROP TABLE IF EXISTS `vitos_panel`'); // delete table vitos_panel
 
-// удаляем мета-данные
-delete_metadata('post', '', 'vitos_panel', '', true); // true - удалить для всех постов
+// remove meta data
+delete_metadata('post', '', 'vitos_panel', '', true); // true - delete for all posts
